@@ -348,7 +348,7 @@ export default function Home() {
         <img 
           src="/ゴカニ AI.svg" 
           alt="GoKAnI AI" 
-          className="h-32 w-auto object-contain"
+          className="h-32 w-auto object-contain bg-transparent"
         />
         <Separator className="my-4" />
       </div>
