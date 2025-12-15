@@ -368,7 +368,7 @@ export default function Home() {
               />
               <Select 
                 value={replicateModelId} 
-                onValueChange={(val) => {
+                onValueChange={(val: string) => {
                   setReplicateModelId(val)
                   if (val === "custom" && !customModelId) {
                     setCustomModelId("black-forest-labs/flux-dev")
@@ -434,7 +434,7 @@ export default function Home() {
                 />
                 <Select 
                   value={model} 
-                  onValueChange={(val) => {
+                  onValueChange={(val: string) => {
                     setModel(val)
                     if (val === "schnell") {
                       setNumInferenceSteps(4)
