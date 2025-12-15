@@ -19,6 +19,14 @@ import { toast } from "sonner"
 import { generateImage } from "./actions"
 import { AVAILABLE_MODELS } from "@/lib/models"
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 function LabelWithTooltip({ id, label, tooltip }: { id?: string, label: string, tooltip: string }) {
   return (
@@ -174,6 +182,12 @@ export default function Home() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
+  
+  // Share State
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [shareFile, setShareFile] = useState<File | null>(null)
+  const [shareUrl, setShareUrl] = useState("")
+  const [isPreparingShare, setIsPreparingShare] = useState(false)
 
   // Form State
   const [replicateModelId, setReplicateModelId] = useState(AVAILABLE_MODELS[0].id)
@@ -282,47 +296,91 @@ export default function Home() {
   }
 
   const handleShare = async (url: string, index: number) => {
-    try {
-      const filename = `generated-image-${index + 1}.${outputFormat}`
+    const filename = `generated-image-${index + 1}.${outputFormat}`
+    setShareUrl(url)
+    
+    // Check if we can share files
+    if (navigator.canShare && navigator.canShare({ files: [new File([], 'test.png')] })) {
+      setIsPreparingShare(true)
+      toast.info("Preparing image for sharing...")
       
-      // Check if file sharing is supported
-      const isFileShareSupported = navigator.canShare && navigator.canShare({ files: [new File([], 'test.png')] })
-
-      if (isFileShareSupported) {
+      try {
         const response = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${filename}`)
-        if (!response.ok) throw new Error('Network response was not ok')
-        
-        const blob = await response.blob()
-        const file = new File([blob], filename, { type: blob.type })
-        
+        if (response.ok) {
+          const blob = await response.blob()
+          const file = new File([blob], filename, { type: blob.type })
+          setShareFile(file)
+          setShareDialogOpen(true)
+          setIsPreparingShare(false)
+          return
+        }
+      } catch (error) {
+        console.warn("File preparation failed", error)
+      }
+      setIsPreparingShare(false)
+    }
+
+    // Fallback to Link Sharing immediately if file sharing isn't supported or failed
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: 'GoKAnI AI Generation',
           text: 'Check out this image I generated with GoKAnI AI!',
-          files: [file]
+          url: url
         })
-        toast.success("Shared successfully")
-      } else {
-        // Fallback to URL sharing
-        if (navigator.share) {
+        toast.success("Shared link successfully")
+        return
+      }
+    } catch (error) {
+      console.warn("Link sharing failed", error)
+    }
+
+    // Fallback to Clipboard
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.info("Sharing failed, link copied to clipboard instead!")
+    } catch (clipboardError) {
+      toast.error("Failed to share. Try downloading instead.")
+    }
+  }
+
+  const executeShare = async () => {
+    if (!shareFile) return
+    
+    try {
+      await navigator.share({
+        title: 'GoKAnI AI Generation',
+        text: 'Check out this image I generated with GoKAnI AI!',
+        files: [shareFile]
+      })
+      toast.success("Shared image successfully")
+      setShareDialogOpen(false)
+    } catch (error: any) {
+      console.warn("Share execution failed", error)
+      
+      // If user cancelled, just close dialog
+      if (error.name === 'AbortError') {
+        setShareDialogOpen(false)
+        return
+      }
+
+      // Fallback to link sharing
+      if (shareUrl) {
+        try {
           await navigator.share({
             title: 'GoKAnI AI Generation',
             text: 'Check out this image I generated with GoKAnI AI!',
-            url: url
+            url: shareUrl
           })
-          toast.success("Shared link successfully")
-        } else {
-          throw new Error("Web Share API not supported")
+          setShareDialogOpen(false)
+          return
+        } catch (e) {
+           // ignore
         }
       }
-    } catch (error) {
-      console.error('Share failed:', error)
-      // Fallback to clipboard
-      try {
-        await navigator.clipboard.writeText(url)
-        toast.info("Sharing failed, link copied to clipboard instead!")
-      } catch (clipboardError) {
-        toast.error("Failed to share. Try downloading instead.")
-      }
+      
+      toast.error("Sharing failed. Try downloading instead.")
+      setShareDialogOpen(false)
     }
   }
 
@@ -814,7 +872,7 @@ export default function Home() {
               {generatedImages.map((src, i) => (
                 <div key={i} className="flex flex-col gap-2">
                   <div 
-                    className="relative bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/25 w-full max-w-md shadow-sm cursor-pointer hover:bg-muted/80 transition-colors"
+                    className="relative rounded-lg flex items-center justify-center w-full max-w-md shadow-sm cursor-pointer transition-colors"
                     style={getAspectRatioStyle(aspectRatio)}
                     onClick={() => {
                       setLightboxIndex(i)
@@ -824,7 +882,7 @@ export default function Home() {
                     <img 
                       src={src} 
                       alt={`Generated image ${i + 1}`} 
-                      className="w-full h-full object-contain rounded-lg"
+                      className="w-full h-full object-cover rounded-lg"
                     />
                   </div>
                   <div className="flex gap-2 w-full max-w-md">
@@ -860,6 +918,21 @@ export default function Home() {
         index={lightboxIndex}
         slides={slides}
       />
+
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ready to Share</DialogTitle>
+            <DialogDescription>
+              Your image has been prepared. Click the button below to share it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShareDialogOpen(false)}>Cancel</Button>
+            <Button onClick={executeShare}>Share Now</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   )
