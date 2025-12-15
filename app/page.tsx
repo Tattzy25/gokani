@@ -343,17 +343,16 @@ export default function Home() {
   }))
 
   return (
-    <div className="container mx-auto py-10 px-[10px] space-y-8">
-      <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col w-full">
+      <div className="w-full flex justify-center items-center py-4">
         <img 
-          src="/ゴカニ AI.svg" 
-          alt="GoKAnI AI" 
-          className="h-32 w-auto object-contain bg-transparent"
+          src="/header svg gokani.svg" 
+          alt="GoKAnI Header" 
+          className="h-24 w-auto object-contain"
         />
-        <Separator className="my-4" />
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="container mx-auto py-10 px-[10px] space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card 1: Prompt & Model Settings */}
         <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] h-full">
           <CardHeader>
@@ -861,6 +860,7 @@ export default function Home() {
         index={lightboxIndex}
         slides={slides}
       />
+      </div>
     </div>
   )
 }
