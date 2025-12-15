@@ -284,13 +284,17 @@ export default function Home() {
   const handleShare = async (url: string, index: number) => {
     try {
       const filename = `generated-image-${index + 1}.${outputFormat}`
-      const response = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${filename}`)
-      if (!response.ok) throw new Error('Network response was not ok')
       
-      const blob = await response.blob()
-      const file = new File([blob], filename, { type: blob.type })
+      // Check if file sharing is supported
+      const isFileShareSupported = navigator.canShare && navigator.canShare({ files: [new File([], 'test.png')] })
 
-      if (navigator.share) {
+      if (isFileShareSupported) {
+        const response = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${filename}`)
+        if (!response.ok) throw new Error('Network response was not ok')
+        
+        const blob = await response.blob()
+        const file = new File([blob], filename, { type: blob.type })
+        
         await navigator.share({
           title: 'GoKAnI AI Generation',
           text: 'Check out this image I generated with GoKAnI AI!',
@@ -298,14 +302,26 @@ export default function Home() {
         })
         toast.success("Shared successfully")
       } else {
-        throw new Error("Web Share API not supported")
+        // Fallback to URL sharing
+        if (navigator.share) {
+          await navigator.share({
+            title: 'GoKAnI AI Generation',
+            text: 'Check out this image I generated with GoKAnI AI!',
+            url: url
+          })
+          toast.success("Shared link successfully")
+        } else {
+          throw new Error("Web Share API not supported")
+        }
       }
     } catch (error) {
       console.error('Share failed:', error)
-      if (error instanceof Error && error.message === "Web Share API not supported") {
-         toast.error("Sharing is not supported on this device")
-      } else {
-         toast.error("Failed to share. Please try again.")
+      // Fallback to clipboard
+      try {
+        await navigator.clipboard.writeText(url)
+        toast.info("Sharing failed, link copied to clipboard instead!")
+      } catch (clipboardError) {
+        toast.error("Failed to share. Try downloading instead.")
       }
     }
   }
@@ -452,6 +468,7 @@ export default function Home() {
                 />
               </div>
             </div>
+            <p className="text-xs font-bold text-center text-muted-foreground mt-4">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
           </CardContent>
         </Card>
 
@@ -573,6 +590,7 @@ export default function Home() {
                 step={1} 
               />
             </div>
+            <p className="text-xs font-bold text-center text-muted-foreground mt-4">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
           </CardContent>
         </Card>
 
@@ -695,6 +713,7 @@ export default function Home() {
                 />
               </div>
             </div>
+            <p className="text-xs font-bold text-center text-muted-foreground mt-4">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
           </CardContent>
         </Card>
 
@@ -738,6 +757,7 @@ export default function Home() {
                 step={0.05} 
               />
             </div>
+            <p className="text-xs font-bold text-center text-muted-foreground mt-4">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
           </CardContent>
         </Card>
       </div>
