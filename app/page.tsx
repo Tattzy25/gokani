@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info, ImageIcon, Loader2, Download, Upload, Link as LinkIcon, X } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Info, ImageIcon, Loader2, Download, Upload, Link as LinkIcon, X, Sparkles, Share2 } from "lucide-react"
 import Lightbox from "yet-another-react-lightbox"
 import "yet-another-react-lightbox/styles.css"
+import { toast } from "sonner"
 import { generateImage } from "./actions"
 import { AVAILABLE_MODELS } from "@/lib/models"
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
@@ -23,14 +24,14 @@ function LabelWithTooltip({ id, label, tooltip }: { id?: string, label: string, 
   return (
     <div className="flex items-center gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-        </TooltipTrigger>
-        <TooltipContent>
-          <p className="max-w-xs">{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
+        </PopoverTrigger>
+        <PopoverContent className="w-auto max-w-xs text-sm">
+          <p>{tooltip}</p>
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }
@@ -58,6 +59,9 @@ function ImageUploadInput({
       onChange(reader.result as string, file.name)
       setLocalFileName(file.name)
     }
+    reader.onerror = () => {
+      toast.error("Failed to read file. Please try again.")
+    }
     reader.readAsDataURL(file)
   }
 
@@ -75,8 +79,12 @@ function ImageUploadInput({
     e.preventDefault()
     setIsDragging(false)
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith('image/')) {
-      handleFile(file)
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        handleFile(file)
+      } else {
+        toast.error("Please upload a valid image file (JPG, PNG, GIF)")
+      }
     }
   }
 
@@ -203,6 +211,13 @@ export default function Home() {
   }
 
   const handleGenerate = async () => {
+    if (isLoading) return // Prevent double clicks
+    
+    if (!prompt.trim()) {
+      toast.error("Please enter a prompt to generate an image")
+      return
+    }
+
     setIsLoading(true)
     setIsGenerated(false)
     setGeneratedImages([])
@@ -239,26 +254,68 @@ export default function Home() {
       setIsGenerated(true)
     } else {
       console.error(result.error)
-      // Handle error (maybe show a toast)
+      toast.error(result.error || "Failed to generate image. Please try again.")
     }
     setIsLoading(false)
   }
 
   const handleDownload = async (url: string, index: number) => {
     try {
-      const response = await fetch(url)
+      const filename = `generated-image-${index + 1}.${outputFormat}`
+      const response = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${filename}`)
+      if (!response.ok) throw new Error('Network response was not ok')
+      
       const blob = await response.blob()
       const blobUrl = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = blobUrl
-      link.download = `generated-image-${index + 1}.${outputFormat}`
+      link.download = filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(blobUrl)
+      toast.success("Image downloaded successfully")
     } catch (error) {
       console.error('Download failed:', error)
-      window.open(url, '_blank')
+      toast.error("Download failed. Please try again.")
+    }
+  }
+
+  const handleShare = async (url: string, index: number) => {
+    try {
+      const filename = `generated-image-${index + 1}.${outputFormat}`
+      const response = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${filename}`)
+      if (!response.ok) throw new Error('Network response was not ok')
+      
+      const blob = await response.blob()
+      const file = new File([blob], filename, { type: blob.type })
+
+      if (navigator.share) {
+        await navigator.share({
+          title: 'GoKAnI AI Generation',
+          text: 'Check out this image I generated with GoKAnI AI!',
+          files: [file]
+        })
+        toast.success("Shared successfully")
+      } else {
+        throw new Error("Web Share API not supported")
+      }
+    } catch (error) {
+      console.error('Share failed:', error)
+      if (error instanceof Error && error.message === "Web Share API not supported") {
+         toast.error("Sharing is not supported on this device")
+      } else {
+         toast.error("Failed to share. Please try again.")
+      }
+    }
+  }
+
+  const handleDownloadAll = async () => {
+    toast.info("Starting download of all images...")
+    for (let i = 0; i < generatedImages.length; i++) {
+      await handleDownload(generatedImages[i], i)
+      // Small delay to prevent browser blocking
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
 
@@ -270,15 +327,19 @@ export default function Home() {
   }))
 
   return (
-    <div className="container mx-auto py-10 space-y-8">
-      <div>
-        <h1 className="text-4xl font-bold text-center">GoKAnI</h1>
+    <div className="container mx-auto py-10 px-[10px] space-y-8">
+      <div className="flex flex-col items-center justify-center">
+        <img 
+          src="/ゴカニ AI.svg" 
+          alt="GoKAnI AI" 
+          className="h-32 w-auto object-contain"
+        />
         <Separator className="my-4" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card 1: Prompt & Model Settings */}
-        <Card>
+        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)]">
           <CardHeader>
             <CardTitle>Prompt & Model</CardTitle>
           </CardHeader>
@@ -329,14 +390,14 @@ export default function Home() {
             )}
 
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <LabelWithTooltip 
                   id="prompt" 
                   label="Prompt" 
                   tooltip="Prompt for generated image. If you include the `trigger_word` used in the training process you are more likely to activate the trained object, style, or concept in the resulting image." 
                 />
-                <span className="text-xs text-muted-foreground">
-                  Trigger word: <span className="font-mono font-medium text-foreground">FAMOSOFLUXO</span>
+                <span className="text-sm text-muted-foreground">
+                  Trigger word: <span className="font-mono font-bold text-primary">FAMOSOFLUXO</span>
                 </span>
               </div>
               <Textarea 
@@ -352,8 +413,8 @@ export default function Home() {
               <div className="space-y-2">
                 <LabelWithTooltip 
                   id="model" 
-                  label="Model" 
-                  tooltip="Which model to run inference with. The dev model performs best with around 28 inference steps but the schnell model only needs 4 steps." 
+                  label="Flux Mode" 
+                  tooltip="Which version of Flux to run inference with. 'Dev' is higher quality (slower), 'Schnell' is faster (lower quality)." 
                 />
                 <Select 
                   value={model} 
@@ -375,6 +436,32 @@ export default function Home() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <LabelWithTooltip 
+                  id="num_outputs" 
+                  label="Num Outputs" 
+                  tooltip="Number of outputs to generate" 
+                />
+                <Input 
+                  id="num_outputs" 
+                  type="number" 
+                  min={1} 
+                  max={4} 
+                  value={numOutputs}
+                  onChange={(e) => setNumOutputs(parseInt(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Dimensions & Quality */}
+        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)]">
+          <CardHeader>
+            <CardTitle>Dimensions & Quality</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <LabelWithTooltip 
                   id="aspect_ratio" 
@@ -401,9 +488,6 @@ export default function Home() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <LabelWithTooltip 
                   id="output_format" 
@@ -421,31 +505,8 @@ export default function Home() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <LabelWithTooltip 
-                  id="num_outputs" 
-                  label="Num Outputs" 
-                  tooltip="Number of outputs to generate" 
-                />
-                <Input 
-                  id="num_outputs" 
-                  type="number" 
-                  min={1} 
-                  max={4} 
-                  value={numOutputs}
-                  onChange={(e) => setNumOutputs(parseInt(e.target.value) || 1)}
-                />
-              </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Card 2: Dimensions & Quality */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Dimensions & Quality</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <LabelWithTooltip 
@@ -516,7 +577,7 @@ export default function Home() {
         </Card>
 
         {/* Card 3: Advanced Generation */}
-        <Card>
+        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)]">
           <CardHeader>
             <CardTitle>Advanced Generation</CardTitle>
           </CardHeader>
@@ -638,7 +699,7 @@ export default function Home() {
         </Card>
 
         {/* Card 4: Image Uploads */}
-        <Card>
+        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)]">
           <CardHeader>
             <CardTitle>Image Uploads</CardTitle>
           </CardHeader>
@@ -684,57 +745,85 @@ export default function Home() {
       <div className="flex justify-center">
         <Button 
           size="lg" 
-          className="w-full max-w-md text-lg" 
+          className={cn(
+            "w-full max-w-md text-2xl py-6 h-auto shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] transition-transform active:scale-95",
+            isLoading && "opacity-50 cursor-not-allowed active:scale-100"
+          )}
           onClick={handleGenerate}
           disabled={isLoading}
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-6 w-6 animate-spin" />
               GENERATING...
             </>
           ) : (
-            "GENERATE"
+            <>
+              <Sparkles className="mr-2 h-6 w-6" />
+              GENERATE
+              <Sparkles className="ml-2 h-6 w-6" />
+            </>
           )}
         </Button>
       </div>
 
       <Separator />
       
-      <div className="flex flex-wrap justify-center items-center gap-8 pb-12">
+      <div className="flex flex-col items-center pb-12">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center space-y-4 py-12">
             <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
             <p className="text-muted-foreground">Creating your masterpiece...</p>
           </div>
         ) : (
-          generatedImages.map((src, i) => (
-            <div key={i} className="flex flex-col gap-2">
-              <div 
-                className="relative bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/25 w-full max-w-md shadow-sm cursor-pointer hover:bg-muted/80 transition-colors"
-                style={getAspectRatioStyle(aspectRatio)}
-                onClick={() => {
-                  setLightboxIndex(i)
-                  setLightboxOpen(true)
-                }}
-              >
-                <img 
-                  src={src} 
-                  alt={`Generated image ${i + 1}`} 
-                  className="w-full h-full object-contain rounded-lg"
-                />
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full"
-                onClick={() => handleDownload(src, i)}
-              >
+          <>
+            {generatedImages.length > 1 && (
+              <Button onClick={handleDownloadAll} variant="secondary" className="mb-8">
                 <Download className="mr-2 h-4 w-4" />
-                Download
+                Download All ({generatedImages.length})
               </Button>
+            )}
+            <div className="flex flex-wrap justify-center items-center gap-8">
+              {generatedImages.map((src, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <div 
+                    className="relative bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/25 w-full max-w-md shadow-sm cursor-pointer hover:bg-muted/80 transition-colors"
+                    style={getAspectRatioStyle(aspectRatio)}
+                    onClick={() => {
+                      setLightboxIndex(i)
+                      setLightboxOpen(true)
+                    }}
+                  >
+                    <img 
+                      src={src} 
+                      alt={`Generated image ${i + 1}`} 
+                      className="w-full h-full object-contain rounded-lg"
+                    />
+                  </div>
+                  <div className="flex gap-2 w-full max-w-md">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleDownload(src, i)}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleShare(src, i)}
+                    >
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Share
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))
+          </>
         )}
       </div>
 
