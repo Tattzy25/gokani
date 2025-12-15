@@ -57,10 +57,16 @@ export async function generateImage(formData: FormData) {
 
   try {
     const output = await replicate.run(
-      "tattzy25/famous-flux:9d51097c0ad12337cd012d7796e61fe20fccfe42f03fcca4546eb36b62636962",
+      "tattzy25/famous-flux:9d51097c0ad12337cd012d7796e61fe20fdcfe42f03fcca4546eb36b62636962",
       { input }
     )
-    return { success: true, output }
+    
+    // Convert FileOutput objects to URL strings
+    const serializedOutput = Array.isArray(output) 
+      ? output.map((item: any) => item.url().toString())
+      : (output as any).url().toString()
+
+    return { success: true, output: serializedOutput }
   } catch (error) {
     console.error("Error generating image:", error)
     return { success: false, error: error instanceof Error ? error.message : String(error) }
