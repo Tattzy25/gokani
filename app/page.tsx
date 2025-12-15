@@ -4,7 +4,7 @@ import { useState, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -355,11 +355,11 @@ export default function Home() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card 1: Prompt & Model Settings */}
-        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)]">
+        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] h-full">
           <CardHeader>
             <CardTitle>Prompt & Model</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-1">
             <div className="space-y-2">
               <LabelWithTooltip 
                 id="replicate_model" 
@@ -468,16 +468,18 @@ export default function Home() {
                 />
               </div>
             </div>
-            <p className="text-xs font-bold text-center text-muted-foreground mt-4">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
           </CardContent>
+          <CardFooter className="justify-center pb-6">
+            <p className="text-xs font-bold text-center text-muted-foreground">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
+          </CardFooter>
         </Card>
 
         {/* Card 2: Dimensions & Quality */}
-        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)]">
+        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] h-full">
           <CardHeader>
             <CardTitle>Dimensions & Quality</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-1">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <LabelWithTooltip 
@@ -590,18 +592,20 @@ export default function Home() {
                 step={1} 
               />
             </div>
-            <p className="text-xs font-bold text-center text-muted-foreground mt-4">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
           </CardContent>
+          <CardFooter className="justify-center pb-6">
+            <p className="text-xs font-bold text-center text-muted-foreground">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
+          </CardFooter>
         </Card>
 
         {/* Card 3: Advanced Generation */}
-        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)]">
+        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] h-full">
           <CardHeader>
             <CardTitle>Advanced Generation</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-1">
             <div className="space-y-2">
-              <LabelWithTooltip 
+              <LabelWithTooltip  
                 label={`Guidance Scale (${guidanceScale})`}
                 tooltip="Guidance scale for the diffusion process. Lower values can give more realistic images. Good values to try are 2, 2.5, 3 and 3.5. Ignored for Schnell model." 
               />
@@ -713,18 +717,20 @@ export default function Home() {
                 />
               </div>
             </div>
-            <p className="text-xs font-bold text-center text-muted-foreground mt-4">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
           </CardContent>
+          <CardFooter className="justify-center pb-6">
+            <p className="text-xs font-bold text-center text-muted-foreground">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
+          </CardFooter>
         </Card>
 
         {/* Card 4: Image Uploads */}
-        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)]">
+        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] h-full">
           <CardHeader>
             <CardTitle>Image Uploads</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-1">
             <ImageUploadInput 
-              id="image_url" 
+              id="image_url"  
               label="Image (Img2Img)" 
               tooltip="Input image for image to image or inpainting mode. If provided, aspect_ratio, width, and height inputs are ignored." 
               value={image}
@@ -757,8 +763,10 @@ export default function Home() {
                 step={0.05} 
               />
             </div>
-            <p className="text-xs font-bold text-center text-muted-foreground mt-4">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
           </CardContent>
+          <CardFooter className="justify-center pb-6">
+            <p className="text-xs font-bold text-center text-muted-foreground">DO NOT TOUCH SETTINGS UNLESS YOU KNOW WHAT YOU ARE DOING</p>
+          </CardFooter>
         </Card>
       </div>
 
