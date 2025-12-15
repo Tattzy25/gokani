@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
+import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,10 +12,12 @@ import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info, ImageIcon, Loader2 } from "lucide-react"
+import { Info, ImageIcon, Loader2, Download, Upload, Link as LinkIcon, X } from "lucide-react"
 import Lightbox from "yet-another-react-lightbox"
 import "yet-another-react-lightbox/styles.css"
 import { generateImage } from "./actions"
+import { AVAILABLE_MODELS } from "@/lib/models"
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 
 function LabelWithTooltip({ id, label, tooltip }: { id?: string, label: string, tooltip: string }) {
   return (
@@ -32,6 +35,127 @@ function LabelWithTooltip({ id, label, tooltip }: { id?: string, label: string, 
   )
 }
 
+function ImageUploadInput({ 
+  id, 
+  value, 
+  onChange, 
+  label,
+  tooltip
+}: { 
+  id: string, 
+  value: string, 
+  onChange: (val: string, fileName?: string) => void, 
+  label: string,
+  tooltip: string
+}) {
+  const [isDragging, setIsDragging] = useState(false)
+  const [localFileName, setLocalFileName] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      onChange(reader.result as string, file.name)
+      setLocalFileName(file.name)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) {
+      handleFile(file)
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFile(file)
+    }
+  }
+  
+  const handleClear = () => {
+    onChange("", "")
+    setLocalFileName("")
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  return (
+    <div className="space-y-2">
+      <LabelWithTooltip id={id} label={label} tooltip={tooltip} />
+      
+      {value ? (
+        <div className="relative rounded-lg border bg-background p-2">
+          <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted/50">
+            <img 
+              src={value} 
+              alt="Preview" 
+              className="h-full w-full object-contain" 
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between px-1">
+            <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+              {localFileName || "Image URL"}
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+              onClick={handleClear}
+            >
+              Clear file
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "relative flex min-h-[150px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 px-6 py-4 text-center transition-colors hover:bg-muted/50",
+            isDragging && "border-primary bg-muted"
+          )}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="flex flex-col items-center gap-2">
+            <div className="rounded-full bg-background p-3 shadow-sm">
+              <Upload className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="text-sm font-medium text-muted-foreground">
+              <span className="font-semibold text-foreground">Click to upload</span> or drag and drop
+            </div>
+            <div className="text-xs text-muted-foreground">
+              SVG, PNG, JPG or GIF
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={handleFileChange}
+      />
+    </div>
+  )
+}
+
 export default function Home() {
   const [numOutputs, setNumOutputs] = useState(1)
   const [aspectRatio, setAspectRatio] = useState("1:1")
@@ -44,6 +168,8 @@ export default function Home() {
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
 
   // Form State
+  const [replicateModelId, setReplicateModelId] = useState(AVAILABLE_MODELS[0].id)
+  const [customModelId, setCustomModelId] = useState("")
   const [prompt, setPrompt] = useState("")
   const [model, setModel] = useState("dev")
   const [outputFormat, setOutputFormat] = useState("webp")
@@ -55,7 +181,9 @@ export default function Home() {
   const [goFast, setGoFast] = useState(false)
   const [disableSafetyChecker, setDisableSafetyChecker] = useState(false)
   const [image, setImage] = useState("")
+  const [imageFileName, setImageFileName] = useState("")
   const [mask, setMask] = useState("")
+  const [maskFileName, setMaskFileName] = useState("")
   const [promptStrength, setPromptStrength] = useState(0.8)
   const [extraLora, setExtraLora] = useState("")
   const [loraScale, setLoraScale] = useState(1)
@@ -79,7 +207,10 @@ export default function Home() {
     setIsGenerated(false)
     setGeneratedImages([])
 
+    const finalModelId = replicateModelId === "custom" ? customModelId : replicateModelId
+
     const formData = new FormData()
+    formData.append("replicate_model_id", finalModelId)
     formData.append("prompt", prompt)
     formData.append("model", model)
     formData.append("aspect_ratio", aspectRatio)
@@ -113,6 +244,24 @@ export default function Home() {
     setIsLoading(false)
   }
 
+  const handleDownload = async (url: string, index: number) => {
+    try {
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = `generated-image-${index + 1}.${outputFormat}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.error('Download failed:', error)
+      window.open(url, '_blank')
+    }
+  }
+
   const { w, h } = getDimensions()
   const slides = generatedImages.map((src) => ({
     src,
@@ -134,6 +283,43 @@ export default function Home() {
             <CardTitle>Prompt & Model</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <LabelWithTooltip 
+                id="replicate_model" 
+                label="Replicate Model" 
+                tooltip="Select the specific Replicate model to use for generation." 
+              />
+              <Select value={replicateModelId} onValueChange={setReplicateModelId}>
+                <SelectTrigger id="replicate_model">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AVAILABLE_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Other (Custom ID)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {replicateModelId === "custom" && (
+              <div className="space-y-2">
+                <LabelWithTooltip 
+                  id="custom_model_id" 
+                  label="Custom Model ID" 
+                  tooltip="Enter the full Replicate model ID (e.g., owner/model:version)" 
+                />
+                <Input 
+                  id="custom_model_id" 
+                  placeholder="owner/model:version" 
+                  value={customModelId}
+                  onChange={(e) => setCustomModelId(e.target.value)}
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <LabelWithTooltip 
                 id="prompt" 
@@ -378,58 +564,9 @@ export default function Home() {
                 onCheckedChange={setDisableSafetyChecker}
               />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 4: Image & LoRA */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Image & LoRA</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <LabelWithTooltip 
-                id="image_url" 
-                label="Image URL (Img2Img)" 
-                tooltip="Input image for image to image or inpainting mode. If provided, aspect_ratio, width, and height inputs are ignored." 
-              />
-              <Input 
-                id="image_url" 
-                placeholder="https://..." 
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <LabelWithTooltip 
-                id="mask_url" 
-                label="Mask URL (Inpainting)" 
-                tooltip="Image mask for image inpainting mode. If provided, aspect_ratio, width, and height inputs are ignored." 
-              />
-              <Input 
-                id="mask_url" 
-                placeholder="https://..." 
-                value={mask}
-                onChange={(e) => setMask(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <LabelWithTooltip 
-                label={`Prompt Strength (${promptStrength})`}
-                tooltip="Prompt strength when using img2img. 1.0 corresponds to full destruction of information in image" 
-              />
-              <Slider 
-                value={[promptStrength]} 
-                onValueChange={(vals) => setPromptStrength(vals[0])} 
-                max={1} 
-                step={0.05} 
-              />
-            </div>
 
             <Separator className="my-2" />
-
+            
             <div className="space-y-2">
               <LabelWithTooltip 
                 id="extra_lora" 
@@ -474,6 +611,49 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Card 4: Image Uploads */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Image Uploads</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ImageUploadInput 
+              id="image_url" 
+              label="Image (Img2Img)" 
+              tooltip="Input image for image to image or inpainting mode. If provided, aspect_ratio, width, and height inputs are ignored." 
+              value={image}
+              onChange={(val, name) => {
+                setImage(val)
+                if (name) setImageFileName(name)
+              }}
+            />
+
+            <ImageUploadInput 
+              id="mask_url" 
+              label="Mask (Inpainting)" 
+              tooltip="Image mask for image inpainting mode. If provided, aspect_ratio, width, and height inputs are ignored." 
+              value={mask}
+              onChange={(val, name) => {
+                setMask(val)
+                if (name) setMaskFileName(name)
+              }}
+            />
+
+            <div className="space-y-2">
+              <LabelWithTooltip 
+                label={`Prompt Strength (${promptStrength})`}
+                tooltip="Prompt strength when using img2img. 1.0 corresponds to full destruction of information in image" 
+              />
+              <Slider 
+                value={[promptStrength]} 
+                onValueChange={(vals) => setPromptStrength(vals[0])} 
+                max={1} 
+                step={0.05} 
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex justify-center">
@@ -504,20 +684,30 @@ export default function Home() {
           </div>
         ) : (
           generatedImages.map((src, i) => (
-            <div 
-              key={i} 
-              className="relative bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/25 w-full max-w-md shadow-sm cursor-pointer hover:bg-muted/80 transition-colors"
-              style={getAspectRatioStyle(aspectRatio)}
-              onClick={() => {
-                setLightboxIndex(i)
-                setLightboxOpen(true)
-              }}
-            >
-              <img 
-                src={src} 
-                alt={`Generated image ${i + 1}`} 
-                className="w-full h-full object-contain rounded-lg"
-              />
+            <div key={i} className="flex flex-col gap-2">
+              <div 
+                className="relative bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/25 w-full max-w-md shadow-sm cursor-pointer hover:bg-muted/80 transition-colors"
+                style={getAspectRatioStyle(aspectRatio)}
+                onClick={() => {
+                  setLightboxIndex(i)
+                  setLightboxOpen(true)
+                }}
+              >
+                <img 
+                  src={src} 
+                  alt={`Generated image ${i + 1}`} 
+                  className="w-full h-full object-contain rounded-lg"
+                />
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => handleDownload(src, i)}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
             </div>
           ))
         )}

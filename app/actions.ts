@@ -7,6 +7,7 @@ const replicate = new Replicate({
 })
 
 export async function generateImage(formData: FormData) {
+  const replicateModelId = formData.get("replicate_model_id") as string
   const prompt = formData.get("prompt") as string
   const model = formData.get("model") as string
   const aspectRatio = formData.get("aspect_ratio") as string
@@ -57,7 +58,7 @@ export async function generateImage(formData: FormData) {
 
   try {
     const output = await replicate.run(
-      "tattzy25/famous-flux:9d51097c0ad12337cd012d7796e61fe20fdcfe42f03fcca4546eb36b62636962",
+      replicateModelId as any,
       { input }
     )
     
