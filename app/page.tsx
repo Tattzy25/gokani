@@ -289,7 +289,15 @@ export default function Home() {
                 label="Replicate Model" 
                 tooltip="Select the specific Replicate model to use for generation." 
               />
-              <Select value={replicateModelId} onValueChange={setReplicateModelId}>
+              <Select 
+                value={replicateModelId} 
+                onValueChange={(val) => {
+                  setReplicateModelId(val)
+                  if (val === "custom" && !customModelId) {
+                    setCustomModelId("black-forest-labs/flux-dev")
+                  }
+                }}
+              >
                 <SelectTrigger id="replicate_model">
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
@@ -321,11 +329,16 @@ export default function Home() {
             )}
 
             <div className="space-y-2">
-              <LabelWithTooltip 
-                id="prompt" 
-                label="Prompt" 
-                tooltip="Prompt for generated image. If you include the `trigger_word` used in the training process you are more likely to activate the trained object, style, or concept in the resulting image." 
-              />
+              <div className="flex items-center gap-2">
+                <LabelWithTooltip 
+                  id="prompt" 
+                  label="Prompt" 
+                  tooltip="Prompt for generated image. If you include the `trigger_word` used in the training process you are more likely to activate the trained object, style, or concept in the resulting image." 
+                />
+                <span className="text-xs text-muted-foreground">
+                  Trigger word: <span className="font-mono font-medium text-foreground">FAMOSOFLUXO</span>
+                </span>
+              </div>
               <Textarea 
                 id="prompt" 
                 placeholder="Enter your prompt here..." 
@@ -342,7 +355,17 @@ export default function Home() {
                   label="Model" 
                   tooltip="Which model to run inference with. The dev model performs best with around 28 inference steps but the schnell model only needs 4 steps." 
                 />
-                <Select value={model} onValueChange={setModel}>
+                <Select 
+                  value={model} 
+                  onValueChange={(val) => {
+                    setModel(val)
+                    if (val === "schnell") {
+                      setNumInferenceSteps(4)
+                    } else {
+                      setNumInferenceSteps(28)
+                    }
+                  }}
+                >
                   <SelectTrigger id="model">
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
@@ -484,7 +507,7 @@ export default function Home() {
               />
               <Slider 
                 value={[outputQuality]} 
-                onValueChange={(vals) => setOutputQuality(vals[0])} 
+                onValueChange={(vals: number[]) => setOutputQuality(vals[0])} 
                 max={100} 
                 step={1} 
               />
@@ -501,13 +524,15 @@ export default function Home() {
             <div className="space-y-2">
               <LabelWithTooltip 
                 label={`Guidance Scale (${guidanceScale})`}
-                tooltip="Guidance scale for the diffusion process. Lower values can give more realistic images. Good values to try are 2, 2.5, 3 and 3.5" 
+                tooltip="Guidance scale for the diffusion process. Lower values can give more realistic images. Good values to try are 2, 2.5, 3 and 3.5. Ignored for Schnell model." 
               />
               <Slider 
                 value={[guidanceScale]} 
-                onValueChange={(vals) => setGuidanceScale(vals[0])} 
+                onValueChange={(vals: number[]) => setGuidanceScale(vals[0])} 
                 max={10} 
                 step={0.1} 
+                disabled={model === "schnell"}
+                className={model === "schnell" ? "opacity-50 cursor-not-allowed" : ""}
               />
             </div>
 
@@ -518,8 +543,8 @@ export default function Home() {
               />
               <Slider 
                 value={[numInferenceSteps]} 
-                onValueChange={(vals) => setNumInferenceSteps(vals[0])} 
-                max={50} 
+                onValueChange={(vals: number[]) => setNumInferenceSteps(vals[0])} 
+                max={model === "schnell" ? 4 : 50} 
                 step={1} 
               />
             </div>
@@ -589,7 +614,7 @@ export default function Home() {
                 />
                 <Slider 
                   value={[loraScale]} 
-                  onValueChange={(vals) => setLoraScale(vals[0])} 
+                  onValueChange={(vals: number[]) => setLoraScale(vals[0])} 
                   min={-1} 
                   max={3} 
                   step={0.1} 
@@ -602,7 +627,7 @@ export default function Home() {
                 />
                 <Slider 
                   value={[extraLoraScale]} 
-                  onValueChange={(vals) => setExtraLoraScale(vals[0])} 
+                  onValueChange={(vals: number[]) => setExtraLoraScale(vals[0])} 
                   min={-1} 
                   max={3} 
                   step={0.1} 
@@ -647,7 +672,7 @@ export default function Home() {
               />
               <Slider 
                 value={[promptStrength]} 
-                onValueChange={(vals) => setPromptStrength(vals[0])} 
+                onValueChange={(vals: number[]) => setPromptStrength(vals[0])} 
                 max={1} 
                 step={0.05} 
               />
