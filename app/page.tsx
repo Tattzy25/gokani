@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import { useWire } from "./wire"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -192,6 +193,7 @@ const artistDescription = {
 }
 
 export default function Home() {
+  const { customerId, version, sourceId, triggerWord } = useWire();
   const [numOutputs, setNumOutputs] = useState(1)
   const [aspectRatio, setAspectRatio] = useState("1:1")
   const [width, setWidth] = useState(1024)
@@ -245,57 +247,40 @@ export default function Home() {
   }
 
   const handleGenerate = async () => {
-    if (isLoading) return // Prevent double clicks
-    
-    if (!prompt.trim()) {
-      toast.error("Please enter a prompt to generate an image")
-      return
+    if (isLoading) return;
+
+    if (prompt.trim().length < 10) {
+      toast.error("Prompt must be at least 10 characters");
+      return;
     }
 
-    setIsLoading(true)
-    setIsGenerated(false)
-    setGeneratedImages([])
+    setIsLoading(true);
+    setIsGenerated(false);
+    setGeneratedImages([]);
 
-    const finalModelId = replicateModelId === "custom" ? customModelId : replicateModelId
+    const formData = new FormData();
+    formData.append("prompt", prompt);
+    formData.append("version", version);
+    formData.append("source_id", sourceId);
+    formData.append("num_outputs", numOutputs.toString());
+    formData.append("aspect_ratio", aspectRatio);
+    formData.append("customer_id", customerId);
+    if (image) formData.append("artist_uploads", image);
 
-    const formData = new FormData()
-    formData.append("replicate_model_id", finalModelId)
-    formData.append("prompt", prompt)
-    formData.append("model", model)
-    formData.append("aspect_ratio", aspectRatio)
-    formData.append("output_format", outputFormat)
-    formData.append("num_outputs", numOutputs.toString())
-    formData.append("width", width.toString())
-    formData.append("height", height.toString())
-    formData.append("megapixels", megapixels)
-    formData.append("output_quality", outputQuality.toString())
-    formData.append("guidance_scale", guidanceScale.toString())
-    formData.append("num_inference_steps", numInferenceSteps.toString())
-    if (seed) formData.append("seed", seed.toString())
-    if (goFast) formData.append("go_fast", "on")
-    if (disableSafetyChecker) formData.append("disable_safety_checker", "off")
-    if (image) formData.append("image", image)
-    if (mask) formData.append("mask", mask)
-    formData.append("prompt_strength", promptStrength.toString())
-    if (extraLora) formData.append("extra_lora", extraLora)
-    formData.append("lora_scale", loraScale.toString())
-    formData.append("extra_lora_scale", extraLoraScale.toString())
-
-    const result = await generateImage(formData)
+    const result = await generateImage(formData);
 
     if (result.success) {
-      setGeneratedImages(Array.isArray(result.output) ? result.output : [result.output])
-      setIsGenerated(true)
+      setGeneratedImages(result.output);
+      setIsGenerated(true);
     } else {
-      console.error(result.error)
-      toast.error(result.error || "Failed to generate image. Please try again.")
+      toast.error(result.error);
     }
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   const handleDownload = async (url: string, index: number) => {
     try {
-      const filename = `generated-image-${index + 1}.${outputFormat}`
+      const filename = `tattty-generated-${index + 1}.${url.split('.').pop()}`
       const response = await fetch(`/api/download?url=${encodeURIComponent(url)}&filename=${filename}`)
       if (!response.ok) throw new Error('Network response was not ok')
       
@@ -316,7 +301,7 @@ export default function Home() {
   }
 
   const handleShare = async (url: string, index: number) => {
-    const filename = `generated-image-${index + 1}.${outputFormat}`
+    const filename = `tattty-generated-${index + 1}.${url.split('.').pop()}`
     setShareUrl(url)
     
     // Check if we can share files
@@ -432,7 +417,7 @@ export default function Home() {
           <CardContent className="space-y-4 flex-1 px-3 sm:px-6">
             <div className="space-y-1 pb-2 [container-type:inline-size]">
               <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground text-left" style={{ fontFamily: "var(--font-rock-salt)" }}>Trigger Word</p>
-              <p className="font-black text-center w-full leading-tight" style={{ fontFamily: "var(--font-orbitron)", fontSize: "6cqw" }}>{artistDescription.triggerWord}</p>
+              <p className="font-black text-center w-full leading-tight" style={{ fontFamily: "var(--font-orbitron)", fontSize: "6cqw" }}>{triggerWord}</p>
             </div>
             <div className="hidden">
               <LabelWithTooltip
