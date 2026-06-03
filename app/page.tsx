@@ -5,21 +5,17 @@ import { useWire } from "./wire"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Info, ImageIcon, Loader2, Download, Upload, Link as LinkIcon, X, Sparkles, Share2 } from "lucide-react"
+import { Info, Loader2, Download, Upload, Sparkles, Share2 } from "lucide-react"
 import Lightbox from "yet-another-react-lightbox"
 import "yet-another-react-lightbox/styles.css"
 import { toast } from "sonner"
 import { generateImage } from "./actions"
-import { AVAILABLE_MODELS } from "@/lib/models"
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import {
   Dialog,
   DialogContent,
@@ -177,9 +173,8 @@ export default function Home() {
   const { customerId, version, sourceId, triggerWord } = useWire();
   const [numOutputs, setNumOutputs] = useState(1)
   const [aspectRatio, setAspectRatio] = useState("1:1")
-  const [width, setWidth] = useState(1024)
-  const [height, setHeight] = useState(1024)
-  const [isGenerated, setIsGenerated] = useState(false)
+  const [width] = useState(1024)
+  const [height] = useState(1024)
   const [isLoading, setIsLoading] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
@@ -216,7 +211,6 @@ export default function Home() {
     }
 
     setIsLoading(true);
-    setIsGenerated(false);
     setGeneratedImages([]);
 
     const formData = new FormData();
@@ -232,7 +226,6 @@ export default function Home() {
 
     if (result.success) {
       setGeneratedImages(result.output);
-      setIsGenerated(true);
     } else {
       toast.error(result.error);
     }
@@ -380,51 +373,6 @@ export default function Home() {
               <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground text-left" style={{ fontFamily: "var(--font-rock-salt)" }}>Trigger Word</p>
               <p className="font-black text-center w-full leading-tight" style={{ fontFamily: "var(--font-orbitron)", fontSize: "6cqw" }}>{triggerWord}</p>
             </div>
-            <div className="hidden">
-              <LabelWithTooltip
-                id="replicate_model"
-                label="Replicate Model"
-                tooltip="Select the specific Replicate model to use for generation."
-              />
-              <Select 
-                value={replicateModelId} 
-                onValueChange={(val: string) => {
-                  setReplicateModelId(val)
-                  if (val === "custom" && !customModelId) {
-                    setCustomModelId("black-forest-labs/flux-dev")
-                  }
-                }}
-              >
-                <SelectTrigger id="replicate_model">
-                  <SelectValue placeholder="Select model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AVAILABLE_MODELS.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="custom">Other (Custom ID)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {replicateModelId === "custom" && (
-              <div className="space-y-2">
-                <LabelWithTooltip 
-                  id="custom_model_id" 
-                  label="Custom Model ID" 
-                  tooltip="Enter the full Replicate model ID (e.g., owner/model:version)" 
-                />
-                <Input 
-                  id="custom_model_id" 
-                  placeholder="owner/model:version" 
-                  value={customModelId}
-                  onChange={(e) => setCustomModelId(e.target.value)}
-                />
-              </div>
-            )}
-
             <div className="space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <LabelWithTooltip 
@@ -432,9 +380,6 @@ export default function Home() {
                   label="Prompt" 
                   tooltip="Prompt for generated image. If you include the `trigger_word` used in the training process you are more likely to activate the trained object, style, or concept in the resulting image." 
                 />
-                <span className="hidden">
-                  Trigger word: <span className="font-mono font-bold text-primary">FAMOSOFLUXO</span>
-                </span>
               </div>
               <Textarea 
                 id="prompt" 
@@ -511,8 +456,9 @@ export default function Home() {
                   <Button onClick={handleDownloadAll} variant="secondary" size="sm" className="flex-1">
                     <Download className="mr-2 h-4 w-4" />Download All ({generatedImages.length})
                   </Button>
-                  <Button onClick={() => handleShare(generatedImages[0], 0)} variant="secondary" size="sm" className="flex-1">
-                    <Share2 className="mr-2 h-4 w-4" />Share
+                  <Button onClick={() => handleShare(generatedImages[0], 0)} variant="secondary" size="sm" className="flex-1" disabled={isPreparingShare}>
+                    {isPreparingShare ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
+                    {isPreparingShare ? "Preparing..." : "Share"}
                   </Button>
                 </div>
               </div>
@@ -523,112 +469,6 @@ export default function Home() {
                 ))}
               </div>
             )}
-          </CardContent>
-          <CardContent className="hidden">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="hidden">
-                <LabelWithTooltip
-                  id="aspect_ratio"
-                  label="Aspect Ratio"
-                  tooltip="Aspect ratio for the generated image. If custom is selected, uses height and width below & will run in bf16 mode"
-                />
-                <Select value={aspectRatio} onValueChange={setAspectRatio}>
-                  <SelectTrigger id="aspect_ratio">
-                    <SelectValue placeholder="Select ratio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1:1">1:1</SelectItem>
-                    <SelectItem value="16:9">16:9</SelectItem>
-                    <SelectItem value="9:16">9:16</SelectItem>
-                    <SelectItem value="4:3">4:3</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <LabelWithTooltip
-                  id="output_format"
-                  label="Format"
-                  tooltip="Format of the output images"
-                />
-                <Select value={outputFormat} onValueChange={setOutputFormat}>
-                  <SelectTrigger id="output_format">
-                    <SelectValue placeholder="Select format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="webp">WebP</SelectItem>
-                    <SelectItem value="jpg">JPG</SelectItem>
-                    <SelectItem value="png">PNG</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <LabelWithTooltip
-                  id="width"
-                  label="Width"
-                  tooltip="Width of generated image. Only works if `aspect_ratio` is set to custom. Will be rounded to nearest multiple of 16. Incompatible with fast generation"
-                />
-                <Input
-                  id="width"
-                  type="number"
-                  placeholder="1024"
-                  min={256}
-                  max={1440}
-                  step={16}
-                  value={width}
-                  onChange={(e) => setWidth(parseInt(e.target.value) || 1024)}
-                />
-              </div>
-              <div className="space-y-2">
-                <LabelWithTooltip
-                  id="height"
-                  label="Height"
-                  tooltip="Height of generated image. Only works if `aspect_ratio` is set to custom. Will be rounded to nearest multiple of 16. Incompatible with fast generation"
-                />
-                <Input
-                  id="height"
-                  type="number"
-                  placeholder="1024"
-                  min={256}
-                  max={1440}
-                  step={16}
-                  value={height}
-                  onChange={(e) => setHeight(parseInt(e.target.value) || 1024)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <LabelWithTooltip
-                id="megapixels"
-                label="Megapixels"
-                tooltip="Approximate number of megapixels for generated image"
-              />
-              <Select value={megapixels} onValueChange={setMegapixels}>
-                <SelectTrigger id="megapixels">
-                  <SelectValue placeholder="Select megapixels" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 MP</SelectItem>
-                  <SelectItem value="0.25">0.25 MP</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <LabelWithTooltip
-                label={`Output Quality (${outputQuality})`}
-                tooltip="Quality when saving the output images, from 0 to 100. 100 is best quality, 0 is lowest quality. Not relevant for .png outputs"
-              />
-              <Slider
-                value={[outputQuality]}
-                onValueChange={(vals: number[]) => setOutputQuality(vals[0])}
-                max={100}
-                step={1}
-              />
-            </div>
           </CardContent>
         </Card>
 
