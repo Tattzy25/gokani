@@ -173,25 +173,6 @@ function ImageUploadInput({
   )
 }
 
-const artistDescription = {
-  triggerWord: "FAMOSOFLUXO",
-  title: "My Personal Ink Identity",
-  identity: [
-    { label: "The Style", text: "You already know how I get down with deep, heavy-contrast black-and-grey shading on skin. I took that exact same dark studio portrait energy and raw automotive steel and locked it into this layout." },
-    { label: "The Stamp", text: "FAMOSOFLUXO — this is my personal signature mark. If you want your piece to hit with the same heavy linework and depth I lay down in the shop, you gotta use this tag." },
-    { label: "The Bloodline", text: "I hand-selected 50 brutal, high-contrast images of custom machines and portraits to build the backbone of this look." },
-  ],
-  rockTitle: "How to Rock My Look",
-  rock: [
-    { label: "The Flash", text: "\"A photo of someone in FAMOSOFLUXO style, standing next to a sports car, professional lighting.\"" },
-    { label: "My Direct Rule", text: "Treat this like planning a full sleeve—don't cheat the details. Spell out the exact pose, describe the machine, and slam FAMOSOFLUXO right at the jump to lock in my custom shading." },
-  ],
-  setupTitle: "The Setup",
-  setup: ["Needle Pressure: 7 – 8", "Line Work / Passes: 20 – 30"],
-  closing: "Take my style, test it against whatever machines you want, and let's see what kind of heavy contrast you can drag out of it.",
-  tags: ["WET DRIP", "PORTRAITS", "FAMOUS"],
-}
-
 export default function Home() {
   const { customerId, version, sourceId, triggerWord } = useWire();
   const [numOutputs, setNumOutputs] = useState(1)
@@ -210,28 +191,8 @@ export default function Home() {
   const [shareUrl, setShareUrl] = useState("")
   const [isPreparingShare, setIsPreparingShare] = useState(false)
 
-  // Form State
-  const [replicateModelId, setReplicateModelId] = useState(AVAILABLE_MODELS[0].id)
-  const [customModelId, setCustomModelId] = useState("")
   const [prompt, setPrompt] = useState("")
-  const [model, setModel] = useState("dev")
-  const [outputFormat, setOutputFormat] = useState("webp")
-  const [megapixels, setMegapixels] = useState("1")
-  const [outputQuality, setOutputQuality] = useState(80)
-  const [guidanceScale, setGuidanceScale] = useState(3)
-  const [numInferenceSteps, setNumInferenceSteps] = useState(28)
-  const [seed, setSeed] = useState<number | undefined>(undefined)
-  const [goFast, setGoFast] = useState(false)
-  const [disableSafetyChecker, setDisableSafetyChecker] = useState(true)
   const [image, setImage] = useState("")
-  const [imageFileName, setImageFileName] = useState("")
-  const [mask, setMask] = useState("")
-  const [maskFileName, setMaskFileName] = useState("")
-  const [promptStrength, setPromptStrength] = useState(0.8)
-  const [extraLora, setExtraLora] = useState("")
-  const [loraScale, setLoraScale] = useState(1)
-  const [extraLoraScale, setExtraLoraScale] = useState(1)
-  const [color, setColor] = useState("color")
 
   const getDimensions = () => {
     if (aspectRatio === "custom") return { w: width, h: height }
@@ -524,10 +485,7 @@ export default function Home() {
               label="Image (Img2Img)"
               tooltip="Input image for image to image or inpainting mode. If provided, aspect_ratio, width, and height inputs are ignored."
               value={image}
-              onChange={(val, name) => {
-                setImage(val)
-                if (name) setImageFileName(name)
-              }}
+              onChange={(val) => setImage(val)}
             />
           </CardContent>
         </Card>
