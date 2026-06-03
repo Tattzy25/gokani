@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Open_Sans, Rock_Salt, Orbitron } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -58,7 +59,7 @@ export default function RootLayout({
       <body
         className={`${openSans.variable} ${rockSalt.variable} ${orbitron.variable} antialiased`}
       >
-        {children}
+        <Suspense>{children}</Suspense>
         <Toaster />
       </body>
     </html>
