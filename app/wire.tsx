@@ -9,5 +9,6 @@ export function useWire() {
     version: p.get("v") ?? "",
     sourceId: p.get("sid") ?? "",
     triggerWord: p.get("tw") ?? "",
+    coverImage: p.get("ci") ?? "",
   }
 }

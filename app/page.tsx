@@ -170,7 +170,7 @@ function ImageUploadInput({
 }
 
 export default function Home() {
-  const { customerId, version, sourceId, triggerWord } = useWire();
+  const { customerId, version, sourceId, triggerWord, coverImage } = useWire();
   const [numOutputs, setNumOutputs] = useState(1)
   const [aspectRatio, setAspectRatio] = useState("1:1")
   const [width] = useState(1024)
@@ -364,7 +364,7 @@ export default function Home() {
       <div className="container mx-auto py-10 px-[10px] space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card 1: Prompt & Model Settings */}
-        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] h-full overflow-hidden">
+        <Card className="shadow-glow h-full overflow-hidden">
           <CardHeader className="hidden">
             <CardTitle>Prompt & Model</CardTitle>
           </CardHeader>
@@ -436,7 +436,7 @@ export default function Home() {
         </Card>
 
         {/* Card 2: Output */}
-        <Card className="shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] h-full overflow-hidden">
+        <Card className="shadow-glow h-full overflow-hidden">
           <CardContent className="p-3 h-full flex flex-col">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center flex-1 space-y-4 py-8">
@@ -447,7 +447,7 @@ export default function Home() {
               <div className="flex flex-col gap-2 flex-1">
                 <div className={cn("grid gap-2 flex-1", generatedImages.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
                   {generatedImages.map((src, i) => (
-                    <div key={i} className="relative rounded-lg overflow-hidden cursor-pointer" onClick={() => { setLightboxIndex(i); setLightboxOpen(true) }}>
+                    <div key={i} className="relative rounded-lg overflow-hidden cursor-pointer" style={getAspectRatioStyle(aspectRatio)} onClick={() => { setLightboxIndex(i); setLightboxOpen(true) }}>
                       <img src={src} alt={`Generated image ${i + 1}`} className="w-full h-full object-cover" />
                     </div>
                   ))}
@@ -462,12 +462,10 @@ export default function Home() {
                   </Button>
                 </div>
               </div>
+            ) : coverImage ? (
+              <img src={coverImage} alt="" className="flex-1 rounded-lg object-cover w-full" style={getAspectRatioStyle(aspectRatio)} />
             ) : (
-              <div className="grid grid-cols-2 gap-2 flex-1">
-                {[0,1,2,3].map((i) => (
-                  <div key={i} className="rounded-lg bg-muted/50 border border-border" />
-                ))}
-              </div>
+              <div className="flex-1 rounded-lg bg-muted/50 border border-border" style={getAspectRatioStyle(aspectRatio)} />
             )}
           </CardContent>
         </Card>
@@ -478,7 +476,7 @@ export default function Home() {
         <Button 
           size="lg" 
           className={cn(
-            "w-full max-w-sm text-lg py-4 h-auto shadow-[0px_0px_7px_3px_rgba(28,156,240,0.8)] transition-transform active:scale-95",
+            "w-full max-w-sm text-lg py-4 h-auto shadow-glow transition-transform active:scale-95",
             isLoading && "opacity-50 cursor-not-allowed active:scale-100"
           )}
           onClick={handleGenerate}
