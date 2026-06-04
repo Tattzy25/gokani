@@ -88,7 +88,7 @@ function ImageUploadInput({
       if (file.type.startsWith('image/')) {
         handleFile(file)
       } else {
-        toast.error("Please upload a valid image file (JPG, PNG, GIF)")
+        toast.error("Please upload a valid image file (JPG, PNG, JPEG)")
       }
     }
   }
@@ -136,7 +136,7 @@ function ImageUploadInput({
       ) : (
         <div
           className={cn(
-            "relative flex min-h-[150px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 px-6 py-4 text-center transition-colors hover:bg-muted/50",
+            "relative flex h-[100px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 px-6 py-4 text-center transition-colors hover:bg-muted/50",
             isDragging && "border-primary bg-muted"
           )}
           onDragOver={handleDragOver}
@@ -328,7 +328,7 @@ export default function Home() {
         try {
           await navigator.share({
             title: 'GoKAnI AI Generation',
-            text: 'Check out this image I generated with GoKAnI AI!',
+            text: 'Check out this image I generated with TaTTTy',
             url: shareUrl
           })
           setShareDialogOpen(false)
@@ -384,7 +384,7 @@ export default function Home() {
               <Textarea 
                 id="prompt" 
                 placeholder="Enter your prompt here..." 
-                className="h-40"
+                className="h-20"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
               />
